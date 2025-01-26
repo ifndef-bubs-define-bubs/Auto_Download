@@ -66,7 +66,7 @@ def save_video(path, txt):
         for link in links:
             link = link.strip()  # Remove any extra whitespace
             if link:
-                yt = YouTube(link)
+                yt = YouTube(link, "WEB")
                 download_video(yt, path)
 
 def save_video_playlists(path, txt):
@@ -76,22 +76,32 @@ def save_video_playlists(path, txt):
         links = file.readlines()
 
         for link in links:
-            link = link.strip()  # Remove any extra whitespace
+            link = link.strip()
             if link:
-                
-                try:
-                    match = re.match(r"<(\d*):(\d*)>(https?://[^\s]+)", link.strip())
-                    
-                    url = match.group(3)
-                    pl = Playlist(url)
 
-                    start_index = int(match.group(1)) if match.group(1) else 0
-                    end_index = int(match.group(2)) if match.group(2) else len(pl.videos) 
+                if link.find(">h") == -1:
+                    pl = Playlist(link, "WEB")
+
+                    start_index = 0
+                    end_index = len(pl.video_urls)
 
                     title_safe = sanitize_title(pl.title)
+
                     download_video_playlist(pl, os.path.join(path, title_safe), start_index, end_index)
-                except:
-                    continue
+
+                else:
+                    start_pos = link.find("<")
+                    end_pos = link.find(">h")
+
+                    pl = Playlist(link[end_pos + 1:], "WEB")
+
+                    start_index = link[start_pos + 1] if link[start_pos + 1] != ':' else 0
+                    end_index = link[end_pos - 1] if link[end_pos - 1] != ':' else len(pl.video_urls)
+
+                    title_safe = sanitize_title(pl.title)
+
+                    download_video_playlist(pl, os.path.join(path, title_safe), start_index, end_index)
+
 
 def save_audio(path, txt):
 
@@ -101,7 +111,7 @@ def save_audio(path, txt):
         for link in links:
             link = link.strip()
             if link:
-                yt = YouTube(link)
+                yt = YouTube(link, "WEB")
                 download_audio(yt, path)
 
 def save_audio_playlists(path, txt):
@@ -112,33 +122,48 @@ def save_audio_playlists(path, txt):
             link = link.strip()  # Remove any extra whitespace
             if link:
 
-                try:
-                    match = re.match(r"<(\d*):(\d*)>(https?://[^\s]+)", link.strip())
-                    
-                    url = match.group(3)
-                    pl = Playlist(url)
-
-                    start_index = int(match.group(1)) if match.group(1) else 0
-                    end_index = int(match.group(2)) if match.group(2) else len(pl.videos) 
+                if link.find(">h") == -1:
+                    pl = Playlist(link, "WEB")
+                    start_index = 0
+                    end_index = len(pl.video_urls)
 
                     title_safe = sanitize_title(pl.title)
+
+                    print(os.path.join(path, title_safe))
+
+
                     download_audio_playlist(pl, os.path.join(path, title_safe), start_index, end_index)
-                except:
-                    continue
+
+                else:
+                    start_pos = link.find("<")
+                    end_pos = link.find(">h")
+
+                    pl = Playlist(link[end_pos + 1:], "WEB")
+
+                    start_index = link[start_pos + 1] if link[start_pos + 1] != ':' else 0
+                    end_index = link[end_pos - 1] if link[end_pos - 1] != ':' else len(pl.video_urls)
+
+                    title_safe = sanitize_title(pl.title)
+
+                    download_audio_playlist(pl, os.path.join(path, title_safe), start_index, end_index)
+
+
 
 if __name__ == "__main__":
 
-    video_txt_filePath = "C:/Users/ebz/Desktop/auto_download/video/videos.txt"
-    video_download_folder = "C:/Users/ebz/Desktop/auto_download/video/videos"
+    pref = "C:/Users/ebube/Desktop/auto_download/"
 
-    audio_txt_file_path = "C:/Users/ebz/Desktop/auto_download/audio/audios.txt"  # Change this to your txt file path
-    audio_download_folder = "C:/Users/ebz/Desktop/auto_download/audio/audios"  # Change this to the desired download folder
+    video_txt_filePath = pref + "video/videos.txt"
+    video_download_folder = pref + "video/videos"
 
-    audio_playlist_txt_path = "C:/Users/ebz/Desktop/auto_download/audio/playlists.txt"
-    audio_playlist_folder  = "C:/Users/ebz/Desktop/auto_download/audio/playlists"
+    audio_txt_file_path = pref + "audio/audios.txt"
+    audio_download_folder = pref + "audio/audios"
 
-    video_playlist_txt_path = "C:/Users/ebz/Desktop/auto_download/video/playlists.txt"
-    video_playlist_folder = "C:/Users/ebz/Desktop/auto_download/video/playlists"
+    audio_playlist_txt_path = pref + "audio/playlists.txt"
+    audio_playlist_folder  =  pref + "audio/playlists"
+
+    video_playlist_txt_path = pref + "video/playlists.txt"
+    video_playlist_folder = pref + "video/playlists"
 
 
     save_video(video_download_folder, video_txt_filePath)

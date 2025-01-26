@@ -2,7 +2,8 @@
 
 * 
 
-!*.python
+!*.py
 
 !libs/
 
+!.gitignore
