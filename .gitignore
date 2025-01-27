@@ -1,0 +1,15 @@
+# Ignore everything by default
+*
+
+!historical_data/
+
+!*.py
+
+!requirements.txt
+
+!*.ipynb
+
+!*.pkl
+
+# Allow the .gitignore file itself
+!.gitignore
