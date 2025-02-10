@@ -1,13 +1,14 @@
-from pytubefix import YouTube
 import os
 import re
-from pytubefix import Playlist
 import subprocess
 
+from pytubefix import Playlist
+from pytubefix import YouTube
+
+
 def sanitize_title(title):
-    invalid_chars = ' /"\''
-    translation_table = str.maketrans({ch: "_" for ch in invalid_chars})
-    return title.translate(translation_table)
+    # replace any character that's not a letter or number with an underscore
+    return re.sub(r'[^a-zA-Z0-9]', '_', title)
 
 
 def download_video(yt, download_folder):
@@ -22,100 +23,67 @@ def download_video(yt, download_folder):
             print(f'Already downloaded: {yt.title}.mp4')
     except Exception as e:
         print(f'Error downloading {yt.title}: {e}')
+    
+    print("\n")
+
 
 def download_audio(yt, download_folder):
     title_safe = sanitize_title(yt.title)
     path = os.path.join(download_folder, title_safe + ".mp3")
+    
     try:
-        path = download_folder + "/" + title_safe + ".mp3"
         if not os.path.exists(path):
+            int_title = title_safe + "_unprocessed.mp4" 
+            intermediate_path = os.path.join(download_folder, int_title)
+
             ys = yt.streams.get_audio_only()
-            ys.download(output_path=download_folder, filename=title_safe + "_unprocessed.mp3")
-            print(f'Successfully downloaded: {yt.title}.mp3')
+            ys.download(output_path=download_folder, filename=int_title)
+            print(f"Successfully downloaded: {yt.title}.mp4")
 
-            subprocess.run([
-                "ffmpeg", "-i", os.path.join(download_folder, title_safe + "_unprocessed.mp3"), # Input file
-                "-vn",
-                "-ar", "44100",
-                "-ac", "2",
-                "-b:a", "192k",
-                "-y",
-                path
-            ], check=True)
+            result = subprocess.run([
+                    "ffmpeg", "-i", intermediate_path,
+                    "-vn",
+                    "-ar", "44100", 
+                    "-ac", "2",
+                    "-b:a", "192k", 
+                    "-y",
+                    path
+                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
-            os.remove(os.path.join(download_folder, title_safe + "_unprocessed.mp3"))
-
+            os.remove(intermediate_path)
+            print(f"Successfully converted: {yt.title}.mp4")
         else:
-            print(f'Already downloaded: {yt.title}.mp3')
+                print(f"Already downloaded: {yt.title}.mp3")
+    except subprocess.CalledProcessError as e:
+            # If ffmpeg fails print the error output
+            print(f"Error converting {yt.title}.mp4: {e.stderr.decode()}")
     except Exception as e:
-        print(f'Error downloading {yt.title}: {e}')
+            print(f"Error downloading {yt.title}: {e}")
+    
+    print("\n")
 
-def download_video_playlist(pl, download_folder, start_index, end_index):
-    for i in range(start_index, end_index):
-        download_video(pl.videos[i], download_folder)
 
-def download_audio_playlist(pl, download_folder, start_index, end_index):
+def download_file_playlist(pl, download_folder, start_index, end_index, func):
      for i in range(start_index, end_index):
-        download_audio(pl.videos[i], download_folder)
-
-def save_video(path, txt):
-
-    with open(txt, 'r') as file:
-        links = file.readlines()
-
-        for link in links:
-            link = link.strip()  # Remove any extra whitespace
-            if link:
-                yt = YouTube(link, "WEB")
-                download_video(yt, path)
-
-def save_video_playlists(path, txt):
+        func(pl.videos[i], download_folder)
 
 
-    with open(txt, 'r') as file:
-        links = file.readlines()
+def save_file(path, txt, func):
 
-        for link in links:
-            link = link.strip()
-            if link:
-
-                if link.find(">h") == -1:
-                    pl = Playlist(link, "WEB")
-
-                    start_index = 0
-                    end_index = len(pl.video_urls)
-
-                    title_safe = sanitize_title(pl.title)
-
-                    download_video_playlist(pl, os.path.join(path, title_safe), start_index, end_index)
-
-                else:
-                    start_pos = link.find("<")
-                    end_pos = link.find(">h")
-
-                    pl = Playlist(link[end_pos + 1:], "WEB")
-
-                    start_index = link[start_pos + 1] if link[start_pos + 1] != ':' else 0
-                    end_index = link[end_pos - 1] if link[end_pos - 1] != ':' else len(pl.video_urls)
-
-                    title_safe = sanitize_title(pl.title)
-
-                    download_video_playlist(pl, os.path.join(path, title_safe), start_index, end_index)
-
-
-def save_audio(path, txt):
-
-    with open(txt, 'r') as file:
+    with open(txt, 'r+') as file:
         links = file.readlines()
 
         for link in links:
             link = link.strip()
             if link:
                 yt = YouTube(link, "WEB")
-                download_audio(yt, path)
+                func(yt, path)
+        
+        file.truncate(0) # empty the file 
 
-def save_audio_playlists(path, txt):
-    with open(txt, 'r') as file:
+
+def save_file_playlists(path, txt, func):
+    with open(txt, 'r+') as file:
         links = file.readlines()
 
         for link in links:
@@ -129,10 +97,7 @@ def save_audio_playlists(path, txt):
 
                     title_safe = sanitize_title(pl.title)
 
-                    print(os.path.join(path, title_safe))
-
-
-                    download_audio_playlist(pl, os.path.join(path, title_safe), start_index, end_index)
+                    download_file_playlist(pl, os.path.join(path, title_safe), start_index, end_index, func)
 
                 else:
                     start_pos = link.find("<")
@@ -145,7 +110,9 @@ def save_audio_playlists(path, txt):
 
                     title_safe = sanitize_title(pl.title)
 
-                    download_audio_playlist(pl, os.path.join(path, title_safe), start_index, end_index)
+                    download_file_playlist(pl, os.path.join(path, title_safe), start_index, end_index, func)
+        
+        file.truncate(0) # empty the file 
 
 
 
@@ -166,11 +133,27 @@ if __name__ == "__main__":
     video_playlist_folder = pref + "video/playlists"
 
 
-    save_video(video_download_folder, video_txt_filePath)
-    save_video_playlists(video_playlist_folder, video_playlist_txt_path)
+    formats = {
+        "video": {
+            "txt_file_path": video_txt_filePath,
+            "download_folder": video_download_folder,
+            "playlist_txt_path": video_playlist_txt_path,
+            "playlist_folder": video_playlist_folder,
+            "download_function": download_video
+        },
+        "audio": {
+            "txt_file_path": audio_txt_file_path,
+            "download_folder": audio_download_folder,
+            "playlist_txt_path": audio_playlist_txt_path,
+            "playlist_folder": audio_playlist_folder,
+            "download_function": download_audio
+        }
+    }
 
-
-    save_audio(audio_download_folder, audio_txt_file_path)
-    save_audio_playlists(audio_playlist_folder, audio_playlist_txt_path)
+    for key, format_info in formats.items():
+        print(f"Processing {key} format\n")
+        save_file(format_info["download_folder"], format_info["txt_file_path"], format_info["download_function"])
+        save_file_playlists(format_info["playlist_folder"], format_info["playlist_txt_path"], format_info["download_function"])
+        print("\n\n\n")
 
 
