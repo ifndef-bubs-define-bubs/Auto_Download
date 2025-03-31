@@ -13,3 +13,5 @@
 
 # Allow the .gitignore file itself
 !.gitignore
+
+!requirements.txt
