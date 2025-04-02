@@ -4,6 +4,9 @@ import time
 import random
 =======
 import re
+<<<<<<< HEAD
+>>>>>>> 702fbe3cfc3bf5ee944fb173140f57e9ba6f6dac
+=======
 >>>>>>> 702fbe3cfc3bf5ee944fb173140f57e9ba6f6dac
 import subprocess
 from getpass import getpass
@@ -12,6 +15,10 @@ from datetime import datetime
 import instaloader
 from pytubefix import Playlist
 from pytubefix import YouTube
+
+from pytubefix import Playlist
+from pytubefix import YouTube
+
 
 from pytubefix import Playlist
 from pytubefix import YouTube
@@ -313,6 +320,7 @@ if __name__ == "__main__":
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     #save_video(video_download_folder, video_txt_filePath)
     #save_video_playlists(video_playlist_folder, video_playlist_txt_path)
 
@@ -324,6 +332,8 @@ if __name__ == "__main__":
     download_instagram_reels(target_username, 3, f"{pref}instagram")
 
 =======
+=======
+>>>>>>> 702fbe3cfc3bf5ee944fb173140f57e9ba6f6dac
     formats = {
         "video": {
             "txt_file_path": video_txt_filePath,
@@ -346,6 +356,9 @@ if __name__ == "__main__":
         save_file(format_info["download_folder"], format_info["txt_file_path"], format_info["download_function"])
         save_file_playlists(format_info["playlist_folder"], format_info["playlist_txt_path"], format_info["download_function"])
         print("\n\n\n")
+<<<<<<< HEAD
+>>>>>>> 702fbe3cfc3bf5ee944fb173140f57e9ba6f6dac
+=======
 >>>>>>> 702fbe3cfc3bf5ee944fb173140f57e9ba6f6dac
 
 
