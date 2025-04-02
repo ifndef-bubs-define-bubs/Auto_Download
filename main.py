@@ -11,30 +11,79 @@ def sanitize_title(title):
     return re.sub(r'[^a-zA-Z0-9]', '_', title)
 
 
+# def download_video(yt, download_folder):
+#     title_safe = sanitize_title(yt.title)
+    
+#     try:
+#         path = download_folder + "/" + title_safe + ".mp4"
+#         if not os.path.exists(path):
+#             video = yt.streams.get_highest_resolution()
+#             video.download(output_path=download_folder, filename=title_safe + ".mp4")
+#             print(f'Successfully downloaded: {yt.title}')
+#         else:
+#             print(f'Already downloaded: {yt.title}.mp4')
+#     except Exception as e:
+#         os.remove(os.path.join(download_folder, title_safe + ".mp4"))
+#         print(f'Error downloading {yt.title}: {e}')
+    
+#     print("\n")
+
+
 def download_video(yt, download_folder):
     title_safe = sanitize_title(yt.title)
+    
     try:
-        path = download_folder + "/" + title_safe + ".mp4"
-        if not os.path.exists(path):
-            video = yt.streams.get_highest_resolution()
-            video.download(output_path=download_folder, filename=title_safe + ".mp4")
+        video_path = os.path.join(download_folder, title_safe + "_video.mp4")
+        audio_path = os.path.join(download_folder, title_safe + "_audio.mp4")
+        final_path = os.path.join(download_folder, title_safe + ".mp4")
+
+        if not os.path.exists(final_path):
+            # Get the best video-only stream (highest resolution)
+            video = yt.streams.filter(adaptive=True, file_extension="mp4").order_by("resolution").desc().first()
+            video.download(output_path=download_folder, filename=title_safe + "_video.mp4")
+
+            # Get the best audio-only stream
+            audio = yt.streams.filter(only_audio=True, file_extension="mp4").order_by("abr").desc().first()
+            audio.download(output_path=download_folder, filename=title_safe + "_audio.mp4")
+
+            # Merge video and audio using ffmpeg
+            subprocess.run([
+                "ffmpeg", "-i", video_path, "-i", audio_path,
+                "-c:v", "copy", "-c:a", "aac", "-strict", "experimental",
+                "-y", final_path
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+
+            # Remove intermediate files
+            os.remove(video_path)
+            os.remove(audio_path)
+
             print(f'Successfully downloaded: {yt.title}')
         else:
             print(f'Already downloaded: {yt.title}.mp4')
+
     except Exception as e:
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+
+        if os.path.exists(video_path):
+            os.remove(video_path)
+
+        if os.path.exists(final_path):
+            os.remove(final_path)
+        
         print(f'Error downloading {yt.title}: {e}')
-    
+
     print("\n")
 
 
 def download_audio(yt, download_folder):
     title_safe = sanitize_title(yt.title)
     path = os.path.join(download_folder, title_safe + ".mp3")
+    int_title = title_safe + "_unprocessed.mp4" 
+    intermediate_path = os.path.join(download_folder, int_title)
     
     try:
         if not os.path.exists(path):
-            int_title = title_safe + "_unprocessed.mp4" 
-            intermediate_path = os.path.join(download_folder, int_title)
 
             ys = yt.streams.get_audio_only()
             ys.download(output_path=download_folder, filename=int_title)
@@ -55,7 +104,8 @@ def download_audio(yt, download_folder):
         else:
                 print(f"Already downloaded: {yt.title}.mp3")
     except subprocess.CalledProcessError as e:
-            # If ffmpeg fails print the error output
+            if os.path.exists(intermediate_path):
+                os.remove(intermediate_path)
             print(f"Error converting {yt.title}.mp4: {e.stderr.decode()}")
     except Exception as e:
             print(f"Error downloading {yt.title}: {e}")
@@ -79,7 +129,7 @@ def save_file(path, txt, func):
                 yt = YouTube(link, "WEB")
                 func(yt, path)
         
-        file.truncate(0) # empty the file 
+        #file.truncate(0) # empty the file 
 
 
 def save_file_playlists(path, txt, func):
@@ -112,7 +162,7 @@ def save_file_playlists(path, txt, func):
 
                     download_file_playlist(pl, os.path.join(path, title_safe), start_index, end_index, func)
         
-        file.truncate(0) # empty the file 
+        #file.truncate(0) # empty the file 
 
 
 
