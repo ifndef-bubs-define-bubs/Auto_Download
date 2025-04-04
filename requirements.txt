@@ -1,1 +1,1 @@
-pytubefix @ git+https://github.com/JuanBindez/pytubefix.git@bb46d1a04a23cf3021f193efd3572a5293296501
+yt-dlp==2025.3.31
