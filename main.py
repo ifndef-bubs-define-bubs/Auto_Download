@@ -48,6 +48,7 @@ def download_video(url, download_folder, tracking_file):
                 'merge_output_format': 'mp4',
                 'outtmpl': final_path,
                 'quiet': True,
+                'extract_flat': True
             }
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -59,7 +60,7 @@ def download_video(url, download_folder, tracking_file):
             print(f'Already downloaded: {title_safe}.mp4')
             
     except Exception as e:
-        print(f'Error downloading {title_safe}: {e}')
+        print(f'Error downloading {url}: {e}')
     
     print("\n")
 
@@ -74,6 +75,7 @@ def download_audio(url, download_folder, tracking_file):
         if title_safe not in tracking or not os.path.exists(tracking[title_safe]["path"]):
             ydl_opts = {
                 'format': 'bestaudio/best',
+                'extract_flat': True,
                 'outtmpl': os.path.join(download_folder, title_safe),  # No extension here
                 'quiet': True,
                 'postprocessors': [{
@@ -92,19 +94,27 @@ def download_audio(url, download_folder, tracking_file):
             print(f'Already downloaded: {title_safe}.mp3')
             
     except Exception as e:
-        print(f'Error downloading {title_safe}: {e}')
+        print(f'Error downloading {url}: {e}')
     
     print("\n")
 
 def download_file_playlist(pl_url, download_folder, start_index, end_index, func, tracking_file):
-    with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+    with yt_dlp.YoutubeDL({'quiet': True, 'ignoreerrors': True}) as ydl:
         info = ydl.extract_info(pl_url, download=False)
-        videos = info['entries'][start_index:end_index]
+        if info is None:
+            print(f"Failed to extract playlist info for {pl_url}")
+            return
+        
+        videos = info['entries'][start_index:] if (end_index == -1) else info['entries'][start_index:end_index]
         
         for video in videos:
+            # Skip unavailable videos
+            if video is None or 'webpage_url' not in video:
+                print(f"Skipping unavailable video in playlist {pl_url}")
+                continue
             video_url = video['webpage_url']
             func(video_url, download_folder, tracking_file)
-
+            
 def save_file(path, txt, func, tracking_file):
     with open(txt, 'r+') as file:
         links = file.readlines()
@@ -122,10 +132,10 @@ def save_file_playlists(path, txt, func, tracking_file):
             link = link.strip()
             if link:
                 if link.find(">h") == -1:
-                    with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+                    with yt_dlp.YoutubeDL({'quiet': True, 'ignoreerrors': True}) as ydl:
                         info = ydl.extract_info(link, download=False)
                         title_safe = sanitize_title(info['title'])
-                    download_file_playlist(link, os.path.join(path, title_safe), 0, float('inf'), func, tracking_file)
+                    download_file_playlist(link, os.path.join(path, title_safe), 0, -1, func, tracking_file)
                 else:
                     start_pos = link.find("<")
                     end_pos = link.find(">h")
